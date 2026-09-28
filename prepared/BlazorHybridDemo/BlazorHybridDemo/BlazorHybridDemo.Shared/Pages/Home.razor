@@ -1,0 +1,90 @@
+﻿@page "/"
+@using BlazorHybridDemo.Shared.Services
+@using System.Text.Json
+@inject IFormFactor FormFactor
+@inject IJSRuntime JS
+
+<PageTitle>Home</PageTitle>
+<script>
+    window.demoApi = {
+        loadUsers: function () {
+            return fetch("/_content/BlazorHybridDemo.Shared/users.json")
+                .then(r => r.text()); // wir holen reinen JSON-Text
+        }
+    };
+</script>
+
+<h1>Hello, world!</h1>
+
+Welcome to your new app running on <em>@factor</em> using <em>@platform</em>.
+
+
+<button class="btn btn-primary" @onclick="PerformWebRequest">Lade Sprecher</button>
+
+<p>@status</p>
+
+@if (users is not null && users.Count > 0)
+{
+    <table class="table table-striped mt-3">
+        <thead>
+            <tr>
+                <th>Id</th>
+                <th>Name</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var user in users)
+            {
+                <tr>
+                    <td>@user.Id</td>
+                    <td>@user.Name</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private string factor => FormFactor.GetFormFactor();
+    private string platform => FormFactor.GetPlatform();
+
+    private string status = "Noch nichts geladen.";
+    private List<UserDto> users = new();
+
+    private async Task PerformWebRequest()
+    {
+        status = "Lade Benutzer von jsonplaceholder.typicode.com ...";
+
+        try
+        {
+            // users = await Http.GetFromJsonAsync<List<UserDto>>(
+            //             "https://jsonplaceholder.typicode.com/users")
+            //         ?? new();
+
+            // status = $"{users.Count} Benutzer geladen.";
+
+            // status = "Lade Daten im WebView …";
+
+            var json = await JS.InvokeAsync<string>("demoApi.loadUsers");
+            var options = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            };
+
+            users = JsonSerializer.Deserialize<List<UserDto>>(json, options) ?? new();
+
+            status = $"{users.Count} Benutzer geladen.";
+        }
+        catch (Exception ex)
+        {
+            status = $"Fehler beim Laden: {ex.Message}";
+        }
+    }
+
+    public class UserDto
+    {
+        public int Id { get; set; }
+        public string? Name { get; set; }
+    }
+}
+
